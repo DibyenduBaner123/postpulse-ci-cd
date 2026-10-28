@@ -1,0 +1,96 @@
+services:
+  mongodb:
+    image: mongo:7.0-jammy
+    container_name: canary-mongodb
+    restart: unless-stopped
+    volumes:
+      - canary_mongodb_data:/data/db
+    networks:
+      - canary-network
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Baseline Stable Release (v1.0.0)
+  backend-stable:
+    build:
+      context: ../../
+      dockerfile: Dockerfile.backend
+    container_name: canary-backend-stable
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - APP_VERSION=1.0.0
+      - RELEASE_TRACK=stable
+      - MONGODB_URI=mongodb://mongodb:27017/postcomposer
+      - JWT_SECRET=production-grade-jwt-secret-docker-compose
+    networks:
+      - canary-network
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # New Candidate Canary Release (v1.1.0)
+  backend-canary:
+    build:
+      context: ../../
+      dockerfile: Dockerfile.backend
+    container_name: canary-backend-canary
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - APP_VERSION=1.1.0-canary
+      - RELEASE_TRACK=canary
+      - MONGODB_URI=mongodb://mongodb:27017/postcomposer
+      - JWT_SECRET=production-grade-jwt-secret-docker-compose
+    networks:
+      - canary-network
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # Nginx Weighted Traffic Router & Frontend Host
+  canary-router:
+    build:
+      context: ../../
+      dockerfile: Dockerfile.frontend
+    container_name: canary-router
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    volumes:
+      - ./nginx.canary.conf:/etc/nginx/conf.d/default.conf:ro
+    networks:
+      - canary-network
+    depends_on:
+      backend-stable:
+        condition: service_healthy
+      backend-canary:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:80/healthz"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+networks:
+  canary-network:
+    driver: bridge
+
+volumes:
+  canary_mongodb_data:
+    driver: local

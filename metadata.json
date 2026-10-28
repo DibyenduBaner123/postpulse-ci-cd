@@ -1,0 +1,6 @@
+{
+  "name": "Multi-Platform Post Composer & CI/CD Pipeline",
+  "description": "Cross-platform social media post composer with complete CI/CD testing suite, Docker containerization, and canary deployment pipelines.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
