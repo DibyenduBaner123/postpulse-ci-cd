@@ -1,6 +1,6 @@
 {
-  "name": "Multi-Platform Post Composer & CI/CD Pipeline",
-  "description": "Cross-platform social media post composer with complete CI/CD testing suite, Docker containerization, and canary deployment pipelines.",
+  "name": "PostPulse – Multi-Platform Social Media Management System",
+  "description": "Enterprise multi-platform social media scheduling, analytics, draft management, and content calendar system.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

@@ -1,118 +1,140 @@
-export type SocialPlatform = 'twitter' | 'linkedin' | 'facebook' | 'instagram';
-
-export type PostStatus = 'draft' | 'scheduled' | 'published';
-
-export interface PlatformConfig {
-  id: SocialPlatform;
-  name: string;
-  charLimit: number;
-  maxMedia: number;
-  maxHashtags: number;
-  requiresMedia: boolean;
-  color: string;
-  bgLight: string;
-  badgeClass: string;
-  tagline: string;
-}
-
-export const PLATFORM_CONFIGS: Record<SocialPlatform, PlatformConfig> = {
-  twitter: {
-    id: 'twitter',
-    name: 'Twitter / X',
-    charLimit: 280,
-    maxMedia: 4,
-    maxHashtags: 10,
-    requiresMedia: false,
-    color: '#000000',
-    bgLight: 'bg-zinc-100 dark:bg-zinc-800',
-    badgeClass: 'bg-black text-white dark:bg-white dark:text-black',
-    tagline: 'Concise thoughts, breaking news & quick takes',
-  },
-  linkedin: {
-    id: 'linkedin',
-    name: 'LinkedIn',
-    charLimit: 3000,
-    maxMedia: 9,
-    maxHashtags: 15,
-    requiresMedia: false,
-    color: '#0A66C2',
-    bgLight: 'bg-blue-50 dark:bg-blue-950/30',
-    badgeClass: 'bg-blue-600 text-white',
-    tagline: 'Professional insights, leadership & business updates',
-  },
-  facebook: {
-    id: 'facebook',
-    name: 'Facebook',
-    charLimit: 5000,
-    maxMedia: 10,
-    maxHashtags: 20,
-    requiresMedia: false,
-    color: '#1877F2',
-    bgLight: 'bg-indigo-50 dark:bg-indigo-950/30',
-    badgeClass: 'bg-indigo-600 text-white',
-    tagline: 'Community stories, announcements & group engagement',
-  },
-  instagram: {
-    id: 'instagram',
-    name: 'Instagram',
-    charLimit: 2200,
-    maxMedia: 10,
-    maxHashtags: 30,
-    requiresMedia: true,
-    color: '#E4405F',
-    bgLight: 'bg-pink-50 dark:bg-pink-950/30',
-    badgeClass: 'bg-gradient-to-r from-amber-500 via-pink-500 to-purple-600 text-white',
-    tagline: 'Visual storytelling, aesthetic photos & reels',
-  },
-};
-
-export interface Post {
-  id: string;
-  userId: string;
-  text: string;
-  platforms: SocialPlatform[];
-  mediaUrls: string[];
-  platformCustomizations?: Partial<Record<SocialPlatform, { text?: string }>>;
-  status: PostStatus;
-  scheduledAt?: string | null;
-  createdAt: string;
-  updatedAt: string;
-}
+export type UserRole = 'ADMIN' | 'MANAGER' | 'EDITOR' | 'VIEWER';
 
 export interface User {
   id: string;
   name: string;
   email: string;
-  role: 'user' | 'admin';
+  role: UserRole;
+  department: string;
+  avatarUrl?: string;
+  createdAt?: string;
+  isActive?: boolean;
+}
+
+export type SocialPlatformId = 'twitter' | 'instagram' | 'facebook' | 'linkedin' | 'youtube';
+
+export interface SocialPlatformConfig {
+  id: SocialPlatformId;
+  name: string;
+  icon: string;
+  color: string;
+  characterLimit: number;
+  maxMediaCount: number;
+  mediaRequired: boolean;
+  maxHashtags: number;
+  supportsLinks: boolean;
+  linkCountsAgainstLength: boolean;
+  allowedMediaTypes: ('image' | 'video' | 'gif')[];
+}
+
+export interface ConnectedAccount {
+  id: string;
+  platformId: SocialPlatformId;
+  accountName: string;
+  handle: string;
+  avatarUrl: string;
+  connectedAt: string;
+  authStatus: 'CONNECTED' | 'EXPIRING_SOON' | 'ERROR';
+  followersCount: number;
+  isEncryptedWithAesGcm: boolean;
+}
+
+export type PostStatus = 'DRAFT' | 'SCHEDULED' | 'PUBLISHED' | 'FAILED' | 'CANCELLED';
+
+export interface MediaAsset {
+  id: string;
+  url: string;
+  type: 'image' | 'video' | 'gif';
+  name: string;
+  sizeBytes: number;
+  dimensions?: { width: number; height: number };
+}
+
+export interface Post {
+  id: string;
+  content: string;
+  platforms: SocialPlatformId[];
+  media: MediaAsset[];
+  hashtags: string[];
+  links: string[];
+  status: PostStatus;
+  scheduledTime?: string;
+  publishedTime?: string;
+  authorId: string;
+  authorName: string;
   createdAt: string;
+  updatedAt: string;
+  publishResult?: {
+    platformResults: Record<SocialPlatformId, { success: boolean; externalPostId?: string; error?: string }>;
+  };
+  analytics?: {
+    likes: number;
+    shares: number;
+    comments: number;
+    clicks: number;
+    impressions: number;
+  };
 }
 
-export interface AuthResponse {
-  token: string;
-  user: User;
+export interface Draft {
+  id: string;
+  content: string;
+  platforms: SocialPlatformId[];
+  media: MediaAsset[];
+  hashtags: string[];
+  links: string[];
+  authorId: string;
+  authorName: string;
+  createdAt: string;
+  updatedAt: string;
+  tags?: string[];
 }
 
-export interface ValidationIssue {
-  platform?: SocialPlatform;
-  field: string;
+export interface CalendarEventItem {
+  id: string;
+  title: string;
+  content: string;
+  start: string;
+  end: string;
+  platforms: SocialPlatformId[];
+  status: PostStatus;
+  authorName: string;
+  mediaCount: number;
+  hashtags: string[];
+}
+
+export interface NotificationItem {
+  id: string;
+  title: string;
   message: string;
+  type: 'INFO' | 'SUCCESS' | 'WARNING' | 'ERROR';
+  read: boolean;
+  createdAt: string;
+  link?: string;
 }
 
-export interface PostValidationResult {
-  isValid: boolean;
-  errors: ValidationIssue[];
+export interface AuditLogItem {
+  id: string;
+  timestamp: string;
+  userId: string;
+  userEmail: string;
+  action: string;
+  targetEntity: string;
+  entityId: string;
+  details: string;
+  correlationId: string;
+  ipAddress: string;
 }
 
-export interface CanaryStatus {
-  version: string;
-  activeReleaseTrack: 'stable' | 'canary';
-  trafficSplitPercent: number;
-  environment: string;
-  totalRequests: number;
-  canaryRequests: number;
-  stableRequests: number;
-  errorCount: number;
-  errorRate: number;
-  health: 'healthy' | 'degraded' | 'unhealthy';
-  rollbackTriggered: boolean;
+export interface KafkaEventItem {
+  eventId: string;
+  topic: 'post-scheduled' | 'post-published' | 'post-failed' | 'post-notifications' | 'post-dlq';
+  partition: number;
+  offset: number;
+  timestamp: string;
+  key: string;
+  payload: Record<string, any>;
+  correlationId: string;
+  attempts: number;
+  status: 'PENDING' | 'PROCESSED' | 'FAILED' | 'ROUTED_TO_DLQ';
 }

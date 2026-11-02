@@ -1,28 +1,33 @@
 #!/usr/bin/env bash
-# ==============================================================================
-# PostPulse Service Health Check Script
-# ==============================================================================
+# ====================================================================
+# PostPulse Automated Health Check Verification Script
+# Validates Spring Boot Actuator and database/cache/kafka readiness
+# ====================================================================
 
 set -euo pipefail
 
-TARGET_URL="${1:-http://localhost:3000/api/health}"
-MAX_RETRIES="${2:-10}"
-DELAY="${3:-2}"
+TARGET_HOST="${1:-http://localhost}"
+ENDPOINT="${TARGET_HOST}/actuator/health"
+MAX_RETRIES=10
+SLEEP_INTERVAL=3
 
-echo "Checking endpoint: ${TARGET_URL}"
-echo "Max retries: ${MAX_RETRIES}, Delay between retries: ${DELAY}s"
+echo "[HealthCheck] Probing PostPulse health at: ${ENDPOINT}"
 
-for i in $(seq 1 "$MAX_RETRIES"); do
-  HTTP_STATUS=$(curl -s -o /tmp/health_response.json -w "%{http_code}" "$TARGET_URL" || echo "000")
-  if [ "$HTTP_STATUS" = "200" ]; then
-    echo "✓ Health Check Passed on attempt ${i} (HTTP 200)."
-    cat /tmp/health_response.json
-    echo ""
-    exit 0
+for i in $(seq 1 "${MAX_RETRIES}"); do
+  HTTP_STATUS=$(curl -s -o /tmp/health_response.json -w "%{http_code}" "${ENDPOINT}" || echo "000")
+
+  if [ "${HTTP_STATUS}" -eq 200 ]; then
+    HEALTH_STATUS=$(grep -o '"status":"[^"]*"' /tmp/health_response.json | head -1 | cut -d'"' -f4 || echo "UNKNOWN")
+    if [ "${HEALTH_STATUS}" = "UP" ]; then
+      echo "[HealthCheck] SUCCESS: System status is UP (Attempt ${i}/${MAX_RETRIES})"
+      cat /tmp/health_response.json | head -n 20
+      exit 0
+    fi
   fi
-  echo "Attempt ${i}/${MAX_RETRIES} failed with status: ${HTTP_STATUS}. Retrying in ${DELAY}s..."
-  sleep "$DELAY"
+
+  echo "[HealthCheck] Attempt ${i}/${MAX_RETRIES} failed with HTTP ${HTTP_STATUS}. Retrying in ${SLEEP_INTERVAL}s..."
+  sleep "${SLEEP_INTERVAL}"
 done
 
-echo "❌ Health Check Failed after ${MAX_RETRIES} attempts."
+echo "[HealthCheck] ERROR: Health check failed after ${MAX_RETRIES} attempts."
 exit 1
